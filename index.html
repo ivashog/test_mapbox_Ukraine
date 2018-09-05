@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Ukraine REM - Mapbox map</title>
+	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+	<script src="https://api.tiles.mapbox.com/mapbox-gl-js/v0.37.0/mapbox-gl.js"></script>
+	<link href="https://api.tiles.mapbox.com/mapbox-gl-js/v0.37.0/mapbox-gl.css" rel="stylesheet" />
+	<link href="style.css" rel="stylesheet" />
+</head>
+
+<body>
+	<!-- Map container -->
+	<div id="map"></div>
+	<!-- Map info container -->
+	<div class="map-overlay" id="features">
+		<h2>Середні ціни на вторинному ринку житлової нерухомості в регіонах України, 4 кв. 2016</h2>
+		<hr>
+		<div id="info">
+			<p>Наведіть курсор на область для детальної інформації!</p>
+		</div>
+		<div id="legend"></div>
+	</div>
+	<!-- Laanguage conntrol -->
+	<ul id="lang-buttons">
+		<li id="button-en" class="button active">ENG</li>
+		<li id="button-ru" class="button">РУС</li>
+		<li id="button-zh" class="button">CHI</li>
+	</ul>
+
+	<script>
+		// Add your map style access token 
+		mapboxgl.accessToken =
+			"pk.eyJ1IjoiaXZhc2hraW5vZyIsImEiOiJjaW5zcXhmaWEwMGthdzJrbHplNzAyanc4In0.2OLLTj-25hoK9iFw9E9L7A";
+		// Add your map style URL and set view 
+		var map = new mapboxgl.Map({
+			container: "map",
+			style: "mapbox://styles/ivashkinog/cj2sqqj67000b2smz5gyc10tu",
+			center: [31.429, 48.342],
+			zoom: 5.5
+		});
+		// Callback function
+		map.on("load", function () {
+			//add a user layer source
+			map.addSource("AVG_price_region", {
+				"type": "vector",
+				"url": "mapbox://ivashkinog.cj2n37vqs002u2wpf8k4ln7we-13sg5"
+			});
+			map.addLayer({
+				"id": "UA-region",
+				"source": "AVG_price_region",
+				"source-layer": "Ukraine",
+				"maxzoom": 17,
+				"type": "fill",
+				"paint": {
+					"fill-color": "transparent",
+					"fill-opacity": 0.0
+				}
+			}, "water");
+			// Add a hover layer 
+			map.addLayer({
+				"id": "UA-region-hover",
+				"source": "AVG_price_region",
+				"source-layer": "Ukraine",
+				"maxzoom": 17,
+				"type": "line",
+				"line-join": "round",
+				"filter": ["==", "NAME", ""],
+				"paint": {
+					"line-color": "black",
+					"line-width": 3,
+					"line-opacity": 0.8,
+					"line-blur": 1.5
+				}
+			});
+			// Add hover efect
+			map.on("mousemove", "UA-region", function (e) {
+				map.setFilter("UA-region-hover", ["==", "NAME", e.features[0].properties.NAME]);
+			});
+			// Reset hover layer"s filter
+			map.on("mouseleave", "UA-region", function () {
+				map.setFilter("UA-region-hover", ["==", "NAME", ""]);
+			});
+			// add a layers
+			var layers = ["менше 400 $ за кв. м", "400 - 499 $ за кв. м", "500 - 599 $ за кв. м", "600 - 699 $ за кв. м",
+				"700 - 999 $ за кв. м", "понад  1000 $ за кв. м"
+			];
+			// add a lagend
+			for (var i = 0; i < layers.length; i++) {
+				var legend_values = ["400", "500", "600", "700", "1000", "1000+"];
+				var color = map.getPaintProperty(layers[i], "fill-color");
+				var item = document.createElement("div");
+				var key = document.createElement("span");
+				key.className = "legend-key";
+				key.style.backgroundColor = color;
+				var value = document.createElement("span");
+				value.className = "legend-value";
+				value.innerHTML = legend_values[i];
+				item.appendChild(value);
+				item.appendChild(key);
+				legend.appendChild(item);
+			}
+			//Add the info window on hover
+			map.on("mousemove", function (e) {
+				var regions = map.queryRenderedFeatures(e.point, {
+					layers: layers
+				});
+				if (regions.length > 0) {
+					document.getElementById("info").innerHTML = "<h3><strong>" + regions[0].properties.NAME +
+						"</strong></h3><p><strong><em>" + regions[0].properties.price2 + "</strong> $ за кв. м</em></p>";
+				} else {
+					document.getElementById("info").innerHTML = "<p>Наведіть курсор на область для детальної інформації!</p>";
+				}
+			});
+		});
+		// Change a map's language
+		document.getElementById("lang-buttons").addEventListener("click", function (event) {
+			var language = event.target.id.substr("button-".length);
+			// Use setLayoutProperty to set the value of a layout property in a style layer.
+			// The three arguments are the id of the layer, the name of the layout property,
+			// and the new property value.
+			map.setLayoutProperty("country-label-lg", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-city-lg-n", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-city-lg-s", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-city-md-n", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-city-md-s", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-city-sm", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-town", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("place-village", "text-field", "{name_" + language + "}");
+			map.setLayoutProperty("water-label", "text-field", "{name_" + language + "}");
+		});
+		// add active class to buttons
+		var selector, elems, makeActive;
+		selector = "#lang-buttons li";
+		elems = document.querySelectorAll(selector);
+
+		makeActive = function () {
+			for (var i = 0; i < elems.length; i++)
+				elems[i].classList.remove("active");
+			this.classList.add("active");
+		};
+		for (var i = 0; i < elems.length; i++)
+			elems[i].addEventListener("click", makeActive);
+	</script>
+
+</body>
+
+</html>
